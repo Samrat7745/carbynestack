@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v2
+name: knative-serving
+description: |
+  A KnativeServing resource for the Knative Operator: Knative Serving with the Carbyne Stack multi-port patch, the Istio
+  ingress, an sslip.io domain and the activation timeout required by Ephemeral.
+version: 0.1.0
+appVersion: "1.23.0"

@@ -1,0 +1,45 @@
+#
+# Copyright (c) 2021-2023 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+#
+# Creates a Minio deployment using the vanilla helm chart (without minio operator!).
+#
+# References:
+#     https://github.com/minio/minio/tree/master/helm/minio
+#
+repositories:
+  - name: minio
+    url: https://charts.min.io/
+
+releases:
+  - name: {{ requiredEnv "RELEASE_NAME" }}-minio
+    chart: minio/minio
+    version: 3.6.6
+    wait: true
+    values:
+      - image:
+          repository: {{ env "MINIO_REPOSITORY" | default "quay.io/minio/minio" }}
+          tag: {{ env "MINIO_TAG" | default "RELEASE.2022-04-16T04-26-02Z" }}
+        mcImage:
+          repository: {{ env "MINIO_MC_REPOSITORY" | default "quay.io/minio/mc"  }}
+          tag: {{ env "MINIO_MC_TAG" | default "RELEASE.2022-04-16T21-11-21Z" }}
+        {{ if env "IMAGE_PULL_SECRET" }}
+        imagePullSecrets:
+          - name: {{ env "IMAGE_PULL_SECRET" }}
+        {{ end }}
+        mode: standalone
+        rootUser: "dummy-key"
+        rootPassword: "dummy-secret"
+        replicas: 1
+        persistence:
+          enabled: {{ env "MINIO_PERSISTENCE_ENABLED" | default true }}
+          size: {{ env "MINIO_PERSISTENCE_SIZE" | default "1Gi" }}
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            memory: 256Mi

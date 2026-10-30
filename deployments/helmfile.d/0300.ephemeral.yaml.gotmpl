@@ -1,0 +1,107 @@
+#
+# Copyright (c) 2021-2025 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+repositories:
+  - name: carbynestack-oci
+    url: "ghcr.io/carbynestack"
+    oci: true
+
+{{- $isMaster := eq (requiredEnv "PLAYER_ID" | int) 0 }}
+{{- $fqdn := (printf "PARTNER_FQDN_%s" (requiredEnv "PLAYER_ID")) | requiredEnv }}
+
+#
+# Deploys a Carbyne Stack Ephemeral Serverless Computing service.
+#
+# References:
+#     https://github.com/carbynestack/ephemeral
+#
+releases:
+- name: {{ requiredEnv "RELEASE_NAME" }}-ephemeral
+  chart: carbynestack-oci/ephemeral
+  version: "0.3.0"
+  values:
+    - playerCount: {{ requiredEnv "PARTNER_COUNT" }}
+    - tls:
+        enabled: {{ env "TLS_ENABLED" | default true }}
+        secret: {{ env "TLS_SECRET_NAME" | default "" | quote }}
+    - discovery:
+        image:
+          registry: {{ env "DISCOVERY_IMAGE_REGISTRY" | default "ghcr.io" }}
+          repository: {{ env "DISCOVERY_IMAGE_REPOSITORY" | default "carbynestack/ephemeral/discovery" }}
+          tag: {{ env "DISCOVERY_IMAGE_TAG" | default "0.3.1" }}
+          {{ if env "IMAGE_PULL_SECRET" }}
+          pullSecrets:
+            - {{ env "IMAGE_PULL_SECRET" }}
+          {{ end }}
+        frontendUrl: {{ $fqdn }}
+        isMaster: {{ $isMaster }}
+        {{- if not $isMaster }}
+        master:
+          host: {{ requiredEnv "PARTNER_FQDN_0" }}
+          port: {{ env "DISCOVERY_MASTER_PORT" | default 80 }}
+        {{- end }}
+    - ephemeral:
+        image:
+          registry: {{ env "EPHEMERAL_IMAGE_REGISTRY" | default "ghcr.io" }}
+          repository: {{ env "EPHEMERAL_IMAGE_REPOSITORY" | default "carbynestack/ephemeral/ephemeral" }}
+          tag: {{ env "EPHEMERAL_IMAGE_TAG" | default "0.3.1" }}
+          {{ if env "IMAGE_PULL_SECRET" }}
+          pullSecrets:
+            - {{ env "IMAGE_PULL_SECRET" }}
+          {{ end }}
+        resources:
+          requests:
+            memory: {{ env "EPHEMERAL_RESOURCES_REQUESTS_MEMORY" | default "256Mi" }}
+            cpu: {{ env "EPHEMERAL_RESOURCES_REQUESTS_CPU" | default "100m" }}
+        minScale: 1
+        programIdentifier: "ephemeral-generic"
+        authUserIdField: "email"
+        amphora:
+          host: {{ requiredEnv "RELEASE_NAME" }}-amphora:10000
+          scheme: "http"
+          path: "/"
+        castor:
+          host: {{ requiredEnv "RELEASE_NAME" }}-castor:10100
+          scheme: "http"
+          path: "/"
+          tupleStock: {{ env "EPHEMERAL_TUPLE_STOCK" | default 1000 }}
+        frontendUrl: {{ $fqdn }}
+        discovery:
+          host: {{ requiredEnv "RELEASE_NAME" }}-ephemeral-discovery
+          port: 8080
+          connectTimeout: "60s"
+        playerId: {{ requiredEnv "PLAYER_ID" }}
+        networkEstablishTimeout: "60s"
+        player:
+          stateTimeout: {{ env "EPHEMERAL_PLAYER_STATE_TIMEOUT" | default "60s" }}
+          computationTimeout: {{ env "EPHEMERAL_PLAYER_COMPUTATION_TIMEOUT" | default "600s" }}
+        spdz:
+          prime: {{ env "SPDZ_PRIME" | default "198766463529478683931867765928436695041" | quote }}
+          rInv: {{ env "SPDZ_R_INV" | default "133854242216446749056083838363708373830" | quote }}
+          gfpMacKey:
+          {{- if eq (requiredEnv "PLAYER_ID" | int) 0 }}
+            {{ env "SPDZ_GFP_MAC_KEY" | default "-88222337191559387830816715872691188861" | quote }}
+          {{- else }}
+            {{ env "SPDZ_GFP_MAC_KEY" | default "1113507028231509545156335486838233835" | quote }}
+          {{- end }}
+          gf2nMacKey:
+          {{- if eq (requiredEnv "PLAYER_ID" | int) 0 }}
+            {{ env "SPDZ_GF2N_MAC_KEY" | default "0xb660b323e6" | quote }}
+          {{- else }}
+            {{ env "SPDZ_GF2N_MAC_KEY" | default "0x4ec9a0343c" | quote }}
+          {{- end }}
+          gf2nBitLength: {{ env "SPDZ_GF2N_BIT_LENGTH" | default 40 }}
+          gf2nStorageSize: {{ env "SPDZ_GF2N_STORAGE_SIZE" | default 8 }}
+    - networkController:
+        image:
+          registry: {{ env "NETWORK_CONTROLLER_IMAGE_REGISTRY" | default "ghcr.io" }}
+          repository: {{ env "NETWORK_CONTROLLER_IMAGE_REPOSITORY" | default "carbynestack/ephemeral/network-controller" }}
+          tag: {{ env "NETWORK_CONTROLLER_IMAGE_TAG" | default "0.3.1" }}
+          {{ if env "IMAGE_PULL_SECRET" }}
+          pullSecrets:
+            - {{ env "IMAGE_PULL_SECRET" }}
+          {{ end }}

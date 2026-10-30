@@ -1,0 +1,51 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+#
+# Installs the Knative Operator and Knative Serving (Carbyne Stack multi-port patched build) with the Istio ingress,
+# an sslip.io domain for the external IP of the Istio ingress gateway and an increased revision timeout.
+#
+# Required environment:
+#   EXTERNAL_IP                   External IP of the Istio ingress gateway (assigned by MetalLB)
+#   TLS_SECRET_NAME               TLS secret of the cluster in istio-system (e.g. apollo-tls-secret-generic); see stack-deployment.md
+#   SERVING_MANIFEST_BASE_URL     Base URL of the patched serving-crds.yaml and serving-core.yaml, e.g.
+#                                 https://github.com/<owner>/serving/releases/download/v1.23.0-multiport-patch
+# Optional environment:
+#   KNATIVE_VERSION               Knative release (default 1.23.0)
+#
+# References:
+#     https://knative.dev/docs/install/operator/knative-with-operators/
+#
+repositories:
+  - name: knative-operator
+    url: https://knative.github.io/operator
+
+{{- $knativeVersion := env "KNATIVE_VERSION" | default "1.23.0" }}
+
+releases:
+  - name: knative-operator
+    namespace: knative-operator
+    createNamespace: true
+    chart: knative-operator/knative-operator
+    version: {{ printf "v%s" $knativeVersion | quote }}
+    wait: true
+    timeout: 600
+
+  - name: knative-serving
+    namespace: knative-serving
+    createNamespace: true
+    chart: ../charts/knative-serving
+    wait: false
+    needs:
+      - knative-operator/knative-operator
+    values:
+      - version: {{ $knativeVersion | quote }}
+        tlsSecretName: {{ requiredEnv "TLS_SECRET_NAME" | quote }}
+        domain: {{ printf "%s.sslip.io" (requiredEnv "EXTERNAL_IP") | quote }}
+        manifests:
+          servingBaseUrl: {{ requiredEnv "SERVING_MANIFEST_BASE_URL" | quote }}
+          netIstioUrl: {{ printf "https://github.com/knative-extensions/net-istio/releases/download/knative-v%s/net-istio.yaml" $knativeVersion | quote }}

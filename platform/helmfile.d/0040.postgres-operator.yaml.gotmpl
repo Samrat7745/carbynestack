@@ -1,0 +1,26 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+#
+# Installs the Zalando Postgres Operator, which manages the PostgreSQL clusters of the Carbyne Stack deployments
+# (see deployments/charts/postgres-dbms).
+#
+# References:
+#     https://github.com/zalando/postgres-operator
+#     https://postgres-operator.readthedocs.io/en/latest/
+#
+repositories:
+  - name: postgres-operator
+    url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+
+releases:
+  - name: postgres-operator
+    namespace: default
+    chart: postgres-operator/postgres-operator
+    version: 2.0.3
+    wait: true
+    timeout: 600

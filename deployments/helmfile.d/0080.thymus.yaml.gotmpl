@@ -1,0 +1,251 @@
+#
+# Copyright (c) 2024-2025 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+repositories:
+  - name: carbynestack-oci
+    url: "ghcr.io/carbynestack"
+    oci: true
+  - name: kratos
+    url: https://k8s.ory.sh/helm/charts
+  - name: hydra
+    url: https://k8s.ory.sh/helm/charts
+  - name: kratos-selfservice-ui-node
+    url: https://k8s.ory.sh/helm/charts
+  - name: stackable-stable
+    url: https://repo.stackable.tech/repository/helm-stable
+
+{{- $isMaster := eq (requiredEnv "PLAYER_ID" | int) 0 }}
+{{- $fqdn := (printf "PARTNER_FQDN_%s" (requiredEnv "PLAYER_ID")) | requiredEnv }}
+{{- $url := printf "%s://%s" (env "PROTOCOL" | default "http") $fqdn }}
+
+#
+# Deploys the Thymus Authn/Authz services.
+#
+# References:
+#     https://github.com/carbynestack/thymus
+#
+releases:
+  - name: {{ requiredEnv "RELEASE_NAME" }}-opa-operator
+    chart: stackable-stable/opa-operator
+    version: "24.7.0"
+    wait: true
+  - name: {{ requiredEnv "RELEASE_NAME" }}-thymus
+    chart: carbynestack-oci/thymus
+    version: "0.6.2"
+    disableValidationOnInstall: true # Seems to be required. See https://github.com/roboll/helmfile/pull/1618
+    needs:
+      - {{ requiredEnv "RELEASE_NAME" }}-opa-operator
+    values:
+      - thymus:
+          policyCatalogue:
+            image:
+              registry: {{ env "THYMUS_IMAGE_REGISTRY" | default "ghcr.io" }}
+              repository: {{ env "THYMUS_IMAGE_REPOSITORY" | default "carbynestack/thymus/catalogue" }}
+              tag: {{ env "THYMUS_IMAGE_TAG" | default "0.2.1" }}
+              {{ if env "IMAGE_PULL_SECRET" }}
+              pullSecrets:
+                - {{ env "IMAGE_PULL_SECRET" }}
+              {{ end }}
+          gateway:
+            enabled: false
+            metadata:
+              name: {{ env "CS_INGRESS_GATEWAY" | default "knative-serving/knative-ingress-gateway" | quote }}
+          users:
+            enabled: false
+      - kratos:
+          kratos:
+            config:
+              session:
+                cookie:
+                  domain: {{ $fqdn }}
+              cookies:
+                domain: {{ $fqdn }}
+              serve:
+                public:
+                  base_url: {{ $url }}/iam
+                admin:
+                  base_url: {{ $url }}/iam/admin
+              selfservice:
+                default_browser_return_url: {{ $url }}/iam/ui
+                allowed_return_urls:
+                  - {{ $url }}/iam/ui
+                flows:
+                  error:
+                    ui_url: {{ $url }}/iam/ui/error
+                  settings:
+                    ui_url: {{ $url }}/iam/ui/settings
+                  logout:
+                    after:
+                      default_browser_return_url: {{ $url }}/iam/ui/login
+                  login:
+                    ui_url: {{ $url }}/iam/ui/login
+                  registration:
+                    ui_url: {{ $url }}/iam/ui/registration
+              secrets:
+                default:
+                  - {{ env "THYMUS_SECRET" | default "CHANGE_THIS_VERY_INSECURE_SECRET" | quote }}
+              oauth2_provider:
+                url: http://{{ requiredEnv "RELEASE_NAME" }}-thymus-hydra-admin:4445
+          deployment:
+            extraEnv:
+              - name: DB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: username
+              - name: DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: password
+              - name: DSN
+                value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/kratos
+            automigration:
+              extraEnv:
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: username
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: password
+                - name: DSN
+                  value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/kratos
+          statefulSet:
+            extraEnv:
+              - name: DB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: username
+              - name: DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: password
+              - name: DSN
+                value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/kratos
+          job:
+            extraEnv:
+              - name: DB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: username
+              - name: DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: password
+              - name: DSN
+                value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/kratos
+          cronjob:
+            cleanup:
+              extraEnv:
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: username
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: kratos.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: password
+                - name: DSN
+                  value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/kratos
+      - hydra:
+          hydra:
+            config:
+              serve:
+                cookies:
+                  domain: {{ $fqdn }}
+              urls:
+                self:
+                  issuer: {{ $url }}/iam/oauth
+                consent: {{ $url }}/iam/ui/consent
+                login: {{ $url }}/iam/ui/login
+                logout: {{ $url }}/iam/ui/logout
+                identity_provider:
+                  publicUrl: {{ $url }}/iam
+                  url: {{ $url }}/iam/admin
+              secrets:
+                system:
+                  - {{ env "THYMUS_SECRET" | default "CHANGE_THIS_VERY_INSECURE_SECRET" | quote }}
+              oidc:
+                subject_identifiers:
+                  pairwise:
+                    salt: {{ env "THYMUS_SECRET" | default "CHANGE_THIS_VERY_INSECURE_SECRET" | quote }}
+          deployment:
+            extraEnv:
+              - name: DB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: username
+              - name: DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: password
+              - name: DSN
+                value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/hydra
+            automigration:
+              extraEnv:
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: username
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: password
+                - name: DSN
+                  value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/hydra
+          job:
+            extraEnv:
+              - name: DB_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: username
+              - name: DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                    key: password
+              - name: DSN
+                value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/hydra
+          cronjob:
+            janitor:
+              extraEnv:
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: username
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: hydra.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+                      key: password
+                - name: DSN
+                  value: postgres://$(DB_USER):$(DB_PASSWORD)@cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms:5432/hydra
+        kratos-selfservice-ui-node:
+          deployment:
+            extraEnv:
+              - name: HYDRA_ADMIN_URL
+                value: http://{{ requiredEnv "RELEASE_NAME" }}-thymus-hydra-admin:4445
+          kratosPublicUrl: http://{{ requiredEnv "RELEASE_NAME" }}-thymus-kratos-public:80
+          kratosBrowserUrl: {{ $url }}/iam
+          config:
+            csrfCookieName: {{ requiredEnv "RELEASE_NAME" }}-thymus

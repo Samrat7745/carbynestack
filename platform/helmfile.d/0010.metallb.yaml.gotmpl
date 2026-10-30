@@ -1,0 +1,47 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+#
+# Installs MetalLB and an address pool so that services of type LoadBalancer get an external IP on kind clusters.
+#
+# Required environment:
+#   METALLB_ADDRESS_POOL  CIDR/range of the pool, e.g. 172.18.1.128/25 (apollo) or 172.18.2.128/25 (starbuck)
+#
+# References:
+#     https://metallb.io/installation/#installation-with-helm
+#
+repositories:
+  - name: metallb
+    url: https://metallb.github.io/metallb
+
+releases:
+  - name: metallb
+    namespace: metallb-system
+    chart: metallb/metallb
+    version: 0.16.1
+    wait: true
+    timeout: 600
+    values:
+      # Layer 2 mode only (as in the original blueprint): the BGP backend (frr-k8s), which the chart enables by default
+      # since 0.15, is not needed and costs a five-container daemon set per cluster.
+      - frrk8s:
+          enabled: false
+    hooks:
+      # MetalLB's speaker requires the privileged pod security level.
+      - events: ["presync"]
+        showlogs: true
+        command: kubectl
+        args: ["apply", "-f", "../manifests/metallb-namespace.yaml"]
+
+  - name: metallb-config
+    namespace: metallb-system
+    chart: ../charts/metallb-config
+    wait: true
+    needs:
+      - metallb-system/metallb
+    values:
+      - addresses: {{ requiredEnv "METALLB_ADDRESS_POOL" | quote }}

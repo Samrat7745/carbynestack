@@ -1,0 +1,10 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# CIDR (or address range, e.g. 172.18.1.128-172.18.1.254) MetalLB hands out to services of type LoadBalancer.
+# Must lie inside the docker network of the kind clusters and must not overlap between clusters.
+addresses: ""

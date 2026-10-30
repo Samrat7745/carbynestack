@@ -1,0 +1,223 @@
+diff --git a/pkg/apis/serving/k8s_validation.go b/pkg/apis/serving/k8s_validation.go
+index 5a8cff484..82304f2cf 100644
+--- a/pkg/apis/serving/k8s_validation.go
++++ b/pkg/apis/serving/k8s_validation.go
+@@ -508,13 +508,16 @@ func AllMountedVolumes(containers []corev1.Container) sets.Set[string] {
+ }
+ 
+ // validateContainersPorts validates that the expected number of container ports are present
+-// and returns the single serving port if error is nil.
++// and returns the serving port (the first port of the one container that declares ports)
++// if error is nil.
+ func validateContainersPorts(containers []corev1.Container) (corev1.ContainerPort, *apis.FieldError) {
++	// Multi-port patch: a single container may declare several ports (the first
++	// one is the serving port), but only one container may declare ports.
+ 	var count int
+ 	var port corev1.ContainerPort
+ 	for i := range containers {
+-		if c := len(containers[i].Ports); c > 0 {
+-			count += c
++		if len(containers[i].Ports) > 0 {
++			count++
+ 			port = containers[i].Ports[0]
+ 		}
+ 	}
+@@ -537,7 +540,7 @@ func validateContainersPorts(containers []corev1.Container) (corev1.ContainerPor
+ 		return port, &apis.FieldError{
+ 			Message: "more than one container port is set",
+ 			Paths:   []string{"ports"},
+-			Details: "Only a single port is allowed across all containers",
++			Details: "Only a single container may declare ports",
+ 		}
+ 	}
+ 
+@@ -796,6 +799,12 @@ func validateContainerPorts(ports []corev1.ContainerPort) *apis.FieldError {
+ 		})
+ 	}
+ 
++	// Multi-port patch: additional ports are passed through to the user container
++	// unchanged; only the basic checks (allowed fields, reserved ports, bounds) apply.
++	for i := 1; i < len(ports); i++ {
++		errs = errs.Also(validateContainerPortBasic(ports[i]).ViaIndex(i))
++	}
++
+ 	return errs
+ }
+ 
+diff --git a/pkg/apis/serving/k8s_validation_test.go b/pkg/apis/serving/k8s_validation_test.go
+index 59285b2d0..91bb22d55 100644
+--- a/pkg/apis/serving/k8s_validation_test.go
++++ b/pkg/apis/serving/k8s_validation_test.go
+@@ -1016,7 +1016,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
+ 		want: &apis.FieldError{
+ 			Message: "more than one container port is set",
+ 			Paths:   []string{"containers[*].ports"},
+-			Details: "Only a single port is allowed across all containers",
++			Details: "Only a single container may declare ports",
+ 		},
+ 	}, {
+ 		name: "flag enabled: multiple containers with multiple ports for each container",
+@@ -1040,7 +1040,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
+ 		want: &apis.FieldError{
+ 			Message: "more than one container port is set",
+ 			Paths:   []string{"containers[*].ports"},
+-			Details: "Only a single port is allowed across all containers",
++			Details: "Only a single container may declare ports",
+ 		},
+ 	}, {
+ 		name: "flag enabled: multiple containers with multiple port for a single container",
+@@ -1058,11 +1058,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
+ 				Image: "helloworld",
+ 			}},
+ 		},
+-		want: &apis.FieldError{
+-			Message: "more than one container port is set",
+-			Paths:   []string{"containers[*].ports"},
+-			Details: "Only a single port is allowed across all containers",
+-		},
++		want: nil,
+ 	}, {
+ 		name: "flag enabled: multiple containers with readinessProbe targeting different container's port",
+ 		ps: corev1.PodSpec{
+@@ -1711,7 +1707,7 @@ func TestUserContainerValidation(t *testing.T) {
+ 		},
+ 		want: nil,
+ 	}, {
+-		name: "has more than one ports with valid names",
++		name: "has more than one port (multi-port patch)",
+ 		c: corev1.Container{
+ 			Image: "foo",
+ 			Ports: []corev1.ContainerPort{{
+@@ -1720,11 +1716,7 @@ func TestUserContainerValidation(t *testing.T) {
+ 				Name: "http1",
+ 			}},
+ 		},
+-		want: &apis.FieldError{
+-			Message: "more than one container port is set",
+-			Paths:   []string{"ports"},
+-			Details: "Only a single port is allowed across all containers",
+-		},
++		want: nil,
+ 	}, {
+ 		name: "has an empty port set",
+ 		c: corev1.Container{
+@@ -1732,6 +1724,18 @@ func TestUserContainerValidation(t *testing.T) {
+ 			Ports: []corev1.ContainerPort{{}},
+ 		},
+ 		want: nil,
++	}, {
++		name: "has additional port that is reserved",
++		c: corev1.Container{
++			Image: "foo",
++			Ports: []corev1.ContainerPort{{
++				ContainerPort: 8080,
++			}, {
++				ContainerPort: 8012,
++			}},
++		},
++		want: apis.ErrInvalidValue("8012 is a reserved port", "ports[1].containerPort",
++			"8012 is a reserved port, please use a different value"),
+ 	}, {
+ 		name: "has more than one unnamed port",
+ 		c: corev1.Container{
+@@ -1742,11 +1746,7 @@ func TestUserContainerValidation(t *testing.T) {
+ 				ContainerPort: 8181,
+ 			}},
+ 		},
+-		want: &apis.FieldError{
+-			Message: "more than one container port is set",
+-			Paths:   []string{"ports"},
+-			Details: "Only a single port is allowed across all containers",
+-		},
++		want: nil,
+ 	}, {
+ 		name: "has tcp protocol",
+ 		c: corev1.Container{
+diff --git a/pkg/reconciler/revision/resources/deploy.go b/pkg/reconciler/revision/resources/deploy.go
+index 13880c270..48383ac11 100644
+--- a/pkg/reconciler/revision/resources/deploy.go
++++ b/pkg/reconciler/revision/resources/deploy.go
+@@ -292,8 +292,8 @@ func makeContainer(container corev1.Container, rev *v1.Revision) corev1.Containe
+ func makeServingContainer(servingContainer corev1.Container, rev *v1.Revision, allowCustomPort bool) corev1.Container {
+ 	userPort := getUserPort(rev)
+ 	userPortStr := strconv.Itoa(int(userPort))
+-	// Replacement is safe as only up to a single port is allowed on the Revision
+-	servingContainer.Ports = buildContainerPorts(userPort)
++	// Multi-port patch: the first port becomes the (renamed) user port, any additional ports are kept as is.
++	servingContainer.Ports = getContainerPorts(servingContainer.Ports, userPort)
+ 	servingContainer.Env = append(servingContainer.Env, buildUserPortEnv(userPortStr))
+ 	container := makeContainer(servingContainer, rev)
+ 	// If the user provides a liveness probe, we should rewrite in the port on the user-container for them.
+@@ -330,6 +330,16 @@ func buildContainerPorts(userPort int32) []corev1.ContainerPort {
+ 	}}
+ }
+ 
++// getContainerPorts returns the ports of the serving container: the first (user) port
++// renamed to v1.UserPortName followed by all additional user-specified ports unchanged.
++func getContainerPorts(ports []corev1.ContainerPort, userPort int32) []corev1.ContainerPort {
++	result := buildContainerPorts(userPort)
++	if len(ports) > 1 {
++		result = append(result, ports[1:]...)
++	}
++	return result
++}
++
+ func buildVarLogSubpathEnvs() []corev1.EnvVar {
+ 	return []corev1.EnvVar{{
+ 		Name: "K_INTERNAL_POD_NAME",
+diff --git a/pkg/reconciler/revision/resources/deploy_test.go b/pkg/reconciler/revision/resources/deploy_test.go
+index 55a61165e..539ab5651 100644
+--- a/pkg/reconciler/revision/resources/deploy_test.go
++++ b/pkg/reconciler/revision/resources/deploy_test.go
+@@ -598,6 +598,51 @@ func TestMakePodSpec(t *testing.T) {
+ 					withEnvVar("SERVING_READINESS_PROBE", `{"tcpSocket":{"port":8888,"host":"127.0.0.1"}}`),
+ 				),
+ 			}),
++	}, {
++		name: "multiple container ports: first is user port, others passed through",
++		rev: revision("bar", "foo",
++			withContainers([]corev1.Container{{
++				Name:  servingContainerName,
++				Image: "busybox",
++				Ports: []corev1.ContainerPort{{
++					Name:          "http1",
++					ContainerPort: 8888,
++				}, {
++					Name:          "metrics",
++					ContainerPort: 9090,
++				}, {
++					ContainerPort: 9191,
++					Protocol:      corev1.ProtocolTCP,
++				}},
++				ReadinessProbe: withTCPReadinessProbe(8888),
++			}}),
++			WithContainerStatuses([]v1.ContainerStatus{{
++				ImageDigest: "busybox@sha256:deadbeef",
++			}}),
++		),
++		want: podSpec(
++			[]corev1.Container{
++				servingContainer(
++					func(container *corev1.Container) {
++						container.Ports = []corev1.ContainerPort{{
++							Name:          v1.UserPortName,
++							ContainerPort: 8888,
++						}, {
++							Name:          "metrics",
++							ContainerPort: 9090,
++						}, {
++							ContainerPort: 9191,
++							Protocol:      corev1.ProtocolTCP,
++						}}
++						container.Image = "busybox@sha256:deadbeef"
++					},
++					withEnvVar("PORT", "8888"),
++				),
++				queueContainer(
++					withEnvVar("USER_PORT", "8888"),
++					withEnvVar("SERVING_READINESS_PROBE", `{"tcpSocket":{"port":8888,"host":"127.0.0.1"}}`),
++				),
++			}),
+ 	}, {
+ 		name: "volumes passed through",
+ 		rev: revision("bar", "foo",

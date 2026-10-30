@@ -1,0 +1,31 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Knative Serving version the operator is asked to deploy.
+version: "1.23.0"
+
+# Domain Knative uses to build service URLs (<service>.<namespace>.<domain>); an sslip.io name for the external IP of
+# the Istio ingress gateway keeps the setup free of DNS configuration.
+domain: ""
+
+# Name of the TLS secret (in istio-system) the HTTPS server of the Knative ingress gateway presents.
+tlsSecretName: ""
+
+# Manifests of Knative Serving. serving-crds.yaml and serving-core.yaml must be the Carbyne Stack multi-port patched
+# build (see patches/ and scripts/build-serving-patch.sh); net-istio is the upstream release.
+manifests:
+  servingBaseUrl: ""
+  netIstioUrl: ""
+
+# Ephemeral computations run as Knative activations and are subject to this timeout (default in Knative: 600).
+maxRevisionTimeoutSeconds: "36000"
+
+ingressGateway:
+  selector:
+    istio: ingressgateway
+  # Service of the Istio ingress gateway Knative routes through.
+  service: istio-ingressgateway.istio-system.svc.cluster.local

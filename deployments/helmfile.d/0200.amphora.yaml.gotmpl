@@ -1,0 +1,74 @@
+#
+# Copyright (c) 2021-2025 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+repositories:
+  - name: carbynestack-oci
+    url: "ghcr.io/carbynestack"
+    oci: true
+
+{{- $isMaster := eq (requiredEnv "PLAYER_ID" | int) 0 }}
+
+#
+# Deploys a Carbyne Stack Amphora Object Store service.
+#
+# References:
+#     https://github.com/carbynestack/amphora
+#
+releases:
+- name: {{ requiredEnv "RELEASE_NAME" }}-amphora
+  chart: carbynestack-oci/amphora
+  version: "0.3.1"
+  values:
+  - auth:
+      userIdFieldName: "email"
+  - spdz:
+      macKey:
+      {{- if (env "MAC_KEY") }}
+        {{- env "MAC_KEY" }}
+      {{- else }}
+        {{- if eq (requiredEnv "PLAYER_ID" | int) 0 }}
+          "-88222337191559387830816715872691188861"
+        {{- else }}
+          "1113507028231509545156335486838233835"
+        {{- end }}
+      {{- end }}
+      prime: {{ env "SPDZ_PRIME" | default "198766463529478683931867765928436695041" | quote }}
+      r: {{ env "SPDZ_R" | default "141515903391459779531506841503331516415" | quote }}
+      rInv: {{ env "SPDZ_R_INV" | default "133854242216446749056083838363708373830" | quote }}
+  - amphora:
+      playerId: {{ requiredEnv "PLAYER_ID" }}
+      vcPartners:
+      {{- range $i := until (requiredEnv "PARTNER_COUNT" | int) }}
+      {{- if ne $i (requiredEnv "PLAYER_ID" | int) }}
+      {{- $partnerFQDN := (printf "PARTNER_FQDN_%d" $i) | requiredEnv }}
+      - {{ printf "http://%s/amphora" $partnerFQDN | quote }}
+      {{- end }}
+      {{- end }}
+      noSslValidation: {{ env "NO_SSL_VALIDATION" | default false }}
+      openingTimeout: {{ env "AMPHORA_OPENING_TIMEOUT" | default 5000 }}
+      image:
+        registry: {{ env "AMPHORA_IMAGE_REGISTRY" | default "ghcr.io" }}
+        repository: {{ env "AMPHORA_IMAGE_REPOSITORY" | default "carbynestack/amphora-service" }}
+        tag: {{ env "AMPHORA_IMAGE_TAG" | default "0.3.0" }}
+        {{ if env "IMAGE_PULL_SECRET" }}
+        pullSecrets:
+          - {{ env "IMAGE_PULL_SECRET" }}
+        {{ end }}
+      castor:
+        serviceUri: http://{{ requiredEnv "RELEASE_NAME" }}-castor:10100
+      redis:
+        host: {{ requiredEnv "RELEASE_NAME" }}-redis-master
+      minio:
+        endpoint: http://{{ requiredEnv "RELEASE_NAME" }}-minio:9000
+      db:
+        host: cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms
+        userSecretName: cs.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+        passwordSecretName: cs.cs-{{ requiredEnv "RELEASE_NAME" }}-postgres-dbms.credentials.postgresql.acid.zalan.do
+      logLevel: DEBUG
+  - service:
+      type: ClusterIP
+      annotations:

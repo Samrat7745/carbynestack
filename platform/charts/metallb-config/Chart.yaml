@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: v2
+name: metallb-config
+description: |
+  Address pool and Layer 2 advertisement for MetalLB (the load balancer implementation used on kind clusters).
+version: 0.1.0
+appVersion: "0.16.1"

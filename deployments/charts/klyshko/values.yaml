@@ -1,0 +1,100 @@
+#
+# Copyright (c) 2021-2023 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+scheduler:
+  enabled: false
+  concurrency: 2
+  ttlSecondsAfterFinished: 120
+  bitGfp:
+    enabled: true
+    threshold: 100000
+    priority: 1
+  inputMaskGfp:
+    enabled: true
+    threshold: 100000
+    priority: 10
+  inverseGfp:
+    enabled: true
+    threshold: 100000
+    priority: 1
+  squareGfp:
+    enabled: true
+    threshold: 100000
+    priority: 1
+  multiplicationGfp:
+    enabled: true
+    threshold: 100000
+    priority: 10
+  bitGf2n:
+    enabled: true
+    threshold: 10000
+    priority: 1
+  inputMaskGf2n:
+    enabled: true
+    threshold: 10000
+    priority: 1
+  inverseGf2n:
+    enabled: true
+    threshold: 10000
+    priority: 1
+  squareGf2n:
+    enabled: true
+    threshold: 10000
+    priority: 1
+  multiplicationGf2n:
+    enabled: true
+    threshold: 10000
+    priority: 1
+
+generator:
+  image:
+    registry: ghcr.io
+    repository: carbynestack/klyshko-mp-spdz
+    tag: 0.2.0
+    pullPolicy: IfNotPresent
+  defaultBatchSize: 100000
+  bitGfp:
+    enabled: true
+    batchSize:
+  inputMaskGfp:
+    enabled: true
+    batchSize:
+  inverseGfp:
+    enabled: true
+    batchSize:
+  squareGfp:
+    enabled: true
+    batchSize:
+  multiplicationGfp:
+    enabled: true
+    batchSize:
+  bitGf2n:
+    enabled: true
+    batchSize:
+  inputMaskGf2n:
+    enabled: true
+    batchSize:
+  inverseGf2n:
+    enabled: true
+    batchSize:
+  squareGf2n:
+    enabled: true
+    batchSize:
+  multiplicationGf2n:
+    enabled: true
+    batchSize:
+
+playerCount:
+playerId:
+engineParams:
+  prime:
+  macKeyShares:
+    0:
+      p:
+      2:
+    1:
+      p:
+      2:

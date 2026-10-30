@@ -1,0 +1,135 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+#
+# Installs Istio using the base, istiod and gateway Helm charts. The Istio operator (and its IstioOperator resource)
+# used by earlier Carbyne Stack releases has been removed from the Istio distribution, the settings of the former
+# IstioOperator resource are therefore expressed as Helm values.
+#
+# The ingress gateway exposes the ports used by the Carbyne Stack services:
+#   80/443      Knative ingress gateway (http / https)
+#   1443        inter-VCP traffic (mTLS), mapped to the workload port 9443
+#   2379        etcd (mTLS), mapped to the workload port 9379
+#   30000-30004 Ephemeral MPC engine ports
+# The egress gateway carries the traffic to partner VCPs, port 80+i belongs to the partner with ID i (at most five).
+#
+# Required environment:
+#   RELEASE_NAME  Release name prefix of the Carbyne Stack deployment (e.g. cs)
+#
+# References:
+#     https://istio.io/latest/docs/setup/install/helm/
+#
+repositories:
+  - name: istio
+    url: https://blob.istio.io/istio-release/charts
+
+{{- $istioVersion := env "ISTIO_VERSION" | default "1.31.3" }}
+
+releases:
+  - name: istio-base
+    namespace: istio-system
+    createNamespace: true
+    chart: istio/base
+    version: {{ $istioVersion | quote }}
+    wait: true
+
+  - name: istiod
+    namespace: istio-system
+    chart: istio/istiod
+    version: {{ $istioVersion | quote }}
+    wait: true
+    timeout: 600
+    needs:
+      - istio-system/istio-base
+    values:
+      - meshConfig:
+          accessLogFile: /dev/stdout
+          defaultConfig:
+            proxyMetadata:
+              ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+              ISTIO_META_DNS_CAPTURE: "true"
+        autoscaleEnabled: false
+        traceSampling: 100
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        global:
+          proxy:
+            # Sidecars are only injected into the workloads selected below.
+            autoInject: disabled
+            resources:
+              requests:
+                cpu: 10m
+                memory: 40Mi
+        sidecarInjectorWebhook:
+          alwaysInjectSelector:
+            - matchExpressions:
+                - {key: sidecar/inject, operator: Exists}
+            - matchExpressions:
+                - {key: app.kubernetes.io/name, operator: In, values: [amphora, castor]}
+            - matchExpressions:
+                - {key: control-plane, operator: In, values: [controller-manager]}
+            - matchExpressions:
+                - {key: app, operator: In, values: [{{ requiredEnv "RELEASE_NAME" }}-ephemeral-discovery]}
+
+  - name: istio-ingressgateway
+    namespace: istio-system
+    chart: istio/gateway
+    version: {{ $istioVersion | quote }}
+    wait: true
+    timeout: 600
+    needs:
+      - istio-system/istiod
+    values:
+      - autoscaling:
+          enabled: false
+        resources:
+          requests:
+            cpu: 10m
+            memory: 256Mi
+        service:
+          # Custom gateway ports can be added in user values overrides, but the ports must be included because Helm
+          # replaces this list. AWS ELB health checks use the first port by default. Setting this to the health-check
+          # port helps ensure health checks work. See https://github.com/istio/istio/issues/12503
+          ports:
+            - {name: status-port, port: 15021, targetPort: 15021}
+            - {name: http2, port: 80, targetPort: 8080}
+            - {name: https, port: 443, targetPort: 8443}
+            - {name: https-mtls, port: 1443, targetPort: 9443}
+            - {name: etcd-mtls, port: 2379, targetPort: 9379}
+            - {name: tls, port: 15443, targetPort: 15443}
+            - {name: ephemeral-mpc-engine-port-0, port: 30000}
+            - {name: ephemeral-mpc-engine-port-1, port: 30001}
+            - {name: ephemeral-mpc-engine-port-2, port: 30002}
+            - {name: ephemeral-mpc-engine-port-3, port: 30003}
+            - {name: ephemeral-mpc-engine-port-4, port: 30004}
+
+  - name: istio-egressgateway
+    namespace: istio-system
+    chart: istio/gateway
+    version: {{ $istioVersion | quote }}
+    wait: true
+    timeout: 600
+    needs:
+      - istio-system/istiod
+    values:
+      - autoscaling:
+          enabled: false
+        resources:
+          requests:
+            cpu: 10m
+            memory: 40Mi
+        service:
+          type: ClusterIP
+          ports:
+            - {name: http-0, port: 80, targetPort: 8080}
+            - {name: http-1, port: 81, targetPort: 8081}
+            - {name: http-2, port: 82, targetPort: 8082}
+            - {name: http-3, port: 83, targetPort: 8083}
+            - {name: http-4, port: 84, targetPort: 8084}
+            - {name: etcd-tcp, port: 2379, targetPort: 8379}

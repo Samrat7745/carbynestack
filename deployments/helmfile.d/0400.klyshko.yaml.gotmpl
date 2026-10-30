@@ -1,0 +1,43 @@
+#
+# Copyright (c) 2021-2025 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+repositories:
+  - name: carbynestack-oci
+    url: "ghcr.io/carbynestack"
+    oci: true
+
+{{- $fqdn := (printf "PARTNER_FQDN_%s" (requiredEnv "PLAYER_ID")) | requiredEnv }}
+
+#
+# Deploys a Carbyne Stack Klyshko Offline Tuple Generation service.
+#
+# References:
+#     https://github.com/carbynestack/klyshko
+#
+releases:
+  - name: {{ requiredEnv "RELEASE_NAME" }}-klyshko
+    chart: carbynestack-oci/klyshko
+    version: "0.4.0"
+    values:
+      - controller:
+          image:
+            registry: {{ env "KLYSHKO_IMAGE_REGISTRY" | default "ghcr.io" }}
+            repository: {{ env "KLYSHKO_OPERATOR_IMAGE_REPOSITORY" | default "carbynestack/klyshko-operator" }}
+            tag: {{ env "KLYSHKO_OPERATOR_IMAGE_TAG" | default "0.3.0" }}
+            pullPolicy: {{ env "KLYSHKO_IMAGE_PULL_POLICY" | default "IfNotPresent" }}
+          etcdEndpoint: {{ if eq (env "ETCD_MASTER_URL") $fqdn }}"cs-etcd:2379"{{ else }}{{ printf "%s:%s" (env "ETCD_MASTER_URL") (env "ETCD_MASTER_PORT" | default "2379") | quote }}{{ end }}
+          castorUrl: {{ env "KLYSHKO_CASTOR_URL" | default "http://cs-castor:10100" | quote }}
+      - provisioner:
+          image:
+            registry: {{ env "KLYSHKO_IMAGE_REGISTRY" | default "ghcr.io" }}
+            repository: {{ env "KLYSHKO_PROVISIONER_IMAGE_REPOSITORY" | default "carbynestack/klyshko-provisioner" }}
+            tag: {{ env "KLYSHKO_PROVISIONER_IMAGE_TAG" | default "0.1.1" }}
+            pullPolicy: {{ env "KLYSHKO_IMAGE_PULL_POLICY" | default "IfNotPresent" }}
+      {{ if env "IMAGE_PULL_SECRET" }}
+      - imagePullSecrets:
+        - {{ env "IMAGE_PULL_SECRET" }}
+      {{ end }}

@@ -1,0 +1,42 @@
+#
+# Copyright (c) 2021-2026 - for information on the respective copyright owner
+# see the NOTICE file and/or the repository https://github.com/carbynestack/carbynestack.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: {{ .Release.Namespace }}
+spec:
+  version: {{ .Values.version | quote }}
+  manifests:
+    - URL: {{ printf "%s/serving-crds.yaml" (required "manifests.servingBaseUrl must be set" .Values.manifests.servingBaseUrl | trimSuffix "/") | quote }}
+    - URL: {{ printf "%s/serving-core.yaml" (.Values.manifests.servingBaseUrl | trimSuffix "/") | quote }}
+    - URL: {{ required "manifests.netIstioUrl must be set" .Values.manifests.netIstioUrl | quote }}
+  ingress:
+    istio:
+      enabled: true
+      knative-ingress-gateway:
+        selector:
+{{ toYaml .Values.ingressGateway.selector | indent 10 }}
+        servers:
+          - hosts:
+              - '*'
+            port:
+              number: 443
+              name: https
+              protocol: HTTPS
+            # Istio >= 1.2x rejects HTTPS servers without TLS settings at admission time, so the credential reference
+            # has to be part of the Gateway from the start (the secret itself may be created afterwards).
+            tls:
+              mode: SIMPLE
+              credentialName: {{ required "tlsSecretName must be set" .Values.tlsSecretName | quote }}
+  config:
+    domain:
+      {{ required "domain must be set (e.g. 172.18.1.128.sslip.io)" .Values.domain | quote }}: ""
+    defaults:
+      max-revision-timeout-seconds: {{ .Values.maxRevisionTimeoutSeconds | quote }}
+    istio:
+      gateway.{{ .Release.Namespace }}.knative-ingress-gateway: {{ .Values.ingressGateway.service | quote }}
