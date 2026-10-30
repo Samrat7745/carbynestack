@@ -51,9 +51,9 @@ releases:
       noSslValidation: {{ env "NO_SSL_VALIDATION" | default false }}
       openingTimeout: {{ env "AMPHORA_OPENING_TIMEOUT" | default 5000 }}
       image:
-        registry: {{ env "AMPHORA_IMAGE_REGISTRY" | default "ghcr.io" }}
-        repository: {{ env "AMPHORA_IMAGE_REPOSITORY" | default "carbynestack/amphora-service" }}
-        tag: {{ env "AMPHORA_IMAGE_TAG" | default "0.3.0" }}
+        registry: {{ env "AMPHORA_IMAGE_REGISTRY" | default "docker.io" }}
+        repository: {{ env "AMPHORA_IMAGE_REPOSITORY" | default "deadstrider/amphora-service" }}
+        tag: {{ env "AMPHORA_IMAGE_TAG" | default "0.1.0-go" }}
         {{ if env "IMAGE_PULL_SECRET" }}
         pullSecrets:
           - {{ env "IMAGE_PULL_SECRET" }}

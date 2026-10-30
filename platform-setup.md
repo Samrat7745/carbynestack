@@ -136,15 +136,16 @@ Knative Serving is installed with the Knative Operator Helm chart (`v1.23.0`) an
 
 **TLS secret.** Istio 1.31 rejects an HTTPS gateway server that has no TLS settings, so the name of the TLS secret has to be part of the Knative gateway from the start (the original guide patched it in afterwards). Choose the name now: `apollo-tls-secret-generic` for `apollo`, `starbuck-tls-secret-generic` for `starbuck`. The secret itself is created in [stack-deployment.md](stack-deployment.md#tls); Istio picks it up when it appears.
 
-**Patched Knative Serving.** Carbyne Stack requires Knative Serving with a patch that allows multiple ports across the containers of a pod (Ephemeral exposes the MPC engine ports next to the user container port). The patch (`patches/knative-serving-v1.23.0-multiport.patch`) applies cleanly to the Knative `v1.23.0` source and the unit tests of the changed packages pass, but **no patched build of Knative 1.23 has been published** (upstream Carbyne Stack only provides `v1.8.2-multiport-patch` and `v0.19.0-multiport-patch`). You have to build and host it yourself:
+**Patched Knative Serving.** Carbyne Stack requires Knative Serving with a patch that allows multiple ports across the containers of a pod (Ephemeral exposes the MPC engine ports next to the user container port). Upstream Carbyne Stack only published patched builds for v1.8.2 and v0.19.0, so one was built for v1.23.0 from `patches/knative-serving-v1.23.0-multiport.patch` with `scripts/build-serving-patch.sh` (unit tests of the changed packages pass). Its images are on Docker Hub (`deadstrider/*`, digest-pinned) and the manifests are in `serving/v1.23.0-multiport/`. **It has not been installed on a cluster yet.**
+
+Serve the manifests to the clusters (keep it running while installing Knative) and point the Helmfile at them:
 
 ```bash
-KO_DOCKER_REPO=ghcr.io/<owner>/knative-serving scripts/build-serving-patch.sh ./serving-build
-# publish serving-build/serving-crds.yaml and serving-build/serving-core.yaml, e.g. as release assets, then
-export SERVING_MANIFEST_BASE_URL=https://github.com/<owner>/serving/releases/download/v1.23.0-multiport-patch
+scripts/serve-serving-manifests.sh                      # separate terminal; prints the URL
+export SERVING_MANIFEST_BASE_URL=http://172.18.0.1:8000 # the printed value
 ```
 
-The images in `KO_DOCKER_REPO` must be pullable from the clusters. The build script has **not** been run end to end; the live validation used the unpatched upstream manifests (`SERVING_MANIFEST_BASE_URL=https://github.com/knative/serving/releases/download/knative-v1.23.0`), which is sufficient to validate the platform but not for deploying Ephemeral.
+To use your own build instead: `KO_DOCKER_REPO=docker.io/<user> scripts/build-serving-patch.sh ./serving-build`, host the two YAML files and set `SERVING_MANIFEST_BASE_URL`. For platform-only validation the unpatched upstream manifests also work (`SERVING_MANIFEST_BASE_URL=https://github.com/knative/serving/releases/download/knative-v1.23.0`), which is what the live validation below used; they are not sufficient for Ephemeral.
 
 ```bash
 export TLS_SECRET_NAME=apollo-tls-secret-generic   # starbuck-tls-secret-generic for starbuck

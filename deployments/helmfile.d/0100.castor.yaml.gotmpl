@@ -27,9 +27,9 @@ releases:
   - castor:
       noSslValidation: {{ env "NO_SSL_VALIDATION" | default false }}
       image:
-        registry: {{ env "CASTOR_IMAGE_REGISTRY" | default "ghcr.io" }}
-        repository: {{ env "CASTOR_IMAGE_REPOSITORY" | default "carbynestack/castor-service" }}
-        tag: {{ env "CASTOR_IMAGE_TAG" | default "0.3.0" }}
+        registry: {{ env "CASTOR_IMAGE_REGISTRY" | default "docker.io" }}
+        repository: {{ env "CASTOR_IMAGE_REPOSITORY" | default "deadstrider/castor-service" }}
+        tag: {{ env "CASTOR_IMAGE_TAG" | default "0.1.0-go" }}
         {{ if env "IMAGE_PULL_SECRET" }}
         pullSecrets:
           - {{ env "IMAGE_PULL_SECRET" }}

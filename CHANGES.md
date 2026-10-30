@@ -27,7 +27,7 @@ For what was actually executed versus only statically validated see [Verificatio
 
 ## Compatibility issues and decisions
 
-1. **No patched Knative Serving for 1.23 (needs action).** Carbyne Stack needs Knative Serving patched to allow multiple ports across containers. Published patched builds exist only for v1.8.2 and v0.19.0. `patches/knative-serving-v1.23.0-multiport.patch` was rebased onto `knative-v1.23.0` (applies cleanly, unit tests of the changed packages pass) and `scripts/build-serving-patch.sh` builds the manifests, but the script was not run and the result is untested. `SERVING_MANIFEST_BASE_URL` has no default for that reason. Without the patch, Ephemeral's multi-port Knative Service is expected to be rejected (not tested on 1.23).
+1. **Patched Knative Serving for 1.23 had to be built.** Carbyne Stack needs Knative Serving patched to allow multiple ports across containers; published builds exist only for v1.8.2 and v0.19.0. `patches/knative-serving-v1.23.0-multiport.patch` (rebased onto `knative-v1.23.0`, unit tests of the changed packages pass) was built with `scripts/build-serving-patch.sh`; the images are on Docker Hub (`deadstrider/*`, digest-pinned) and the generated manifests are in `serving/v1.23.0-multiport/`. They are served to the clusters with `scripts/serve-serving-manifests.sh`. The build and image push succeeded and the HTTP serving path was checked from the `kind` network, but **the patched build has not been installed on a cluster**. `SERVING_MANIFEST_BASE_URL` still has no default.
 2. **Istio 1.31 rejects HTTPS gateway servers without TLS settings and `targetPort` on gateway ports** (found by deploying; the validating webhook of `istiod` refuses the Knative gateway). The `target_port: 443` of the original `KnativeServing` was dropped and the TLS credential name is set at creation, so the manual `kubectl patch gateway` step of the original guide became a verification step. Consequence: `TLS_SECRET_NAME` is required when installing Knative.
 3. **`net-certmanager` dropped**: the last release is v1.14.0; Knative 1.23 has none and nothing in the Helmfiles uses cert-manager.
 4. **Istio chart repository moved** from `istio-release.storage.googleapis.com/charts` (stale, ends at 1.31.0-rc) to `blob.istio.io/istio-release/charts`.
@@ -45,6 +45,10 @@ For what was actually executed versus only statically validated see [Verificatio
 * CloudNativePG would replace the CRD, the service names (`-rw`/`-ro`) and the secret layout (`<cluster>-app` with different keys), which means changing the published component charts or Helmfile glue in castor, amphora and thymus — an architectural change the task excludes.
 * CloudNativePG v1.27.1 is also not the newest minor line, so it would not even reduce version drift.
 * Risks accepted: Spilo/PostgreSQL 15 image compatibility (verified live), scram-sha-256 default (see item 6).
+
+## Container images
+
+The Helmfile defaults point to Go builds published on Docker Hub (`deadstrider/{castor-service,amphora-service,ephemeral-discovery,ephemeral-network-controller,klyshko-operator,thymus-policy-catalogue}:0.1.0-go`); every image can be overridden per component through `<NAME>_IMAGE_{REGISTRY,REPOSITORY,TAG}` (falling back to the upstream Java images is possible). The Ephemeral MPC engine keeps its upstream image because the Go build lacks the MP-SPDZ runtime. Compatibility of the Go images with the *published* SDK 0.8.1 charts was not tested on a cluster. See [test-deployment.md](test-deployment.md).
 
 ## Not verified
 

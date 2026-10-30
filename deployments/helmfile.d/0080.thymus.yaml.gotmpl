@@ -43,9 +43,9 @@ releases:
       - thymus:
           policyCatalogue:
             image:
-              registry: {{ env "THYMUS_IMAGE_REGISTRY" | default "ghcr.io" }}
-              repository: {{ env "THYMUS_IMAGE_REPOSITORY" | default "carbynestack/thymus/catalogue" }}
-              tag: {{ env "THYMUS_IMAGE_TAG" | default "0.2.1" }}
+              registry: {{ env "THYMUS_IMAGE_REGISTRY" | default "docker.io" }}
+              repository: {{ env "THYMUS_IMAGE_REPOSITORY" | default "deadstrider/thymus-policy-catalogue" }}
+              tag: {{ env "THYMUS_IMAGE_TAG" | default "0.1.0-go" }}
               {{ if env "IMAGE_PULL_SECRET" }}
               pullSecrets:
                 - {{ env "IMAGE_PULL_SECRET" }}

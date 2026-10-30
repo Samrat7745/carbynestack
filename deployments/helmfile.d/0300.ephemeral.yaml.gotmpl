@@ -30,9 +30,9 @@ releases:
         secret: {{ env "TLS_SECRET_NAME" | default "" | quote }}
     - discovery:
         image:
-          registry: {{ env "DISCOVERY_IMAGE_REGISTRY" | default "ghcr.io" }}
-          repository: {{ env "DISCOVERY_IMAGE_REPOSITORY" | default "carbynestack/ephemeral/discovery" }}
-          tag: {{ env "DISCOVERY_IMAGE_TAG" | default "0.3.1" }}
+          registry: {{ env "DISCOVERY_IMAGE_REGISTRY" | default "docker.io" }}
+          repository: {{ env "DISCOVERY_IMAGE_REPOSITORY" | default "deadstrider/ephemeral-discovery" }}
+          tag: {{ env "DISCOVERY_IMAGE_TAG" | default "0.1.0-go" }}
           {{ if env "IMAGE_PULL_SECRET" }}
           pullSecrets:
             - {{ env "IMAGE_PULL_SECRET" }}
@@ -98,9 +98,9 @@ releases:
           gf2nStorageSize: {{ env "SPDZ_GF2N_STORAGE_SIZE" | default 8 }}
     - networkController:
         image:
-          registry: {{ env "NETWORK_CONTROLLER_IMAGE_REGISTRY" | default "ghcr.io" }}
-          repository: {{ env "NETWORK_CONTROLLER_IMAGE_REPOSITORY" | default "carbynestack/ephemeral/network-controller" }}
-          tag: {{ env "NETWORK_CONTROLLER_IMAGE_TAG" | default "0.3.1" }}
+          registry: {{ env "NETWORK_CONTROLLER_IMAGE_REGISTRY" | default "docker.io" }}
+          repository: {{ env "NETWORK_CONTROLLER_IMAGE_REPOSITORY" | default "deadstrider/ephemeral-network-controller" }}
+          tag: {{ env "NETWORK_CONTROLLER_IMAGE_TAG" | default "0.1.0-go" }}
           {{ if env "IMAGE_PULL_SECRET" }}
           pullSecrets:
             - {{ env "IMAGE_PULL_SECRET" }}
