@@ -1,0 +1,16 @@
+# Prologue to read in the inputs
+port=regint(10000)
+listen(port)
+socket_id = regint()
+acceptclientconnection(socket_id, port)
+v = sint.read_from_socket(socket_id, 2)
+
+# The logic
+first_billionaires_net_worth = v[0]
+second_billionaires_net_worth= v[1]
+result = first_billionaires_net_worth < second_billionaires_net_worth
+
+# Epilogue to return the outputs
+resp = Array(1, sint)
+resp[0] = result
+sint.write_to_socket(socket_id, resp)
