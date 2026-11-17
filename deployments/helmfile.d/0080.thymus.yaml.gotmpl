@@ -45,7 +45,7 @@ releases:
             image:
               registry: {{ env "THYMUS_IMAGE_REGISTRY" | default "docker.io" }}
               repository: {{ env "THYMUS_IMAGE_REPOSITORY" | default "deadstrider/thymus-policy-catalogue" }}
-              tag: {{ env "THYMUS_IMAGE_TAG" | default "0.1.2-go" }}
+              tag: {{ env "THYMUS_IMAGE_TAG" | default "0.1.3-go" }}
               {{ if env "IMAGE_PULL_SECRET" }}
               pullSecrets:
                 - {{ env "IMAGE_PULL_SECRET" }}

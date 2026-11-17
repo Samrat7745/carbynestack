@@ -8,12 +8,12 @@ A hands-on walkthrough to deploy and test the modernized Carbyne Stack on two ki
 
 | Component | Image (default in the Helmfiles) | Notes |
 |---|---|---|
-| Castor | `docker.io/deadstrider/castor-service:0.1.2-go` | Go port, used with the published Castor chart 0.4.0 |
-| Amphora | `docker.io/deadstrider/amphora-service:0.1.2-go` | Go port, published Amphora chart 0.3.1 |
-| Ephemeral discovery | `docker.io/deadstrider/ephemeral-discovery:0.1.2-go` | Go |
-| Ephemeral network controller | `docker.io/deadstrider/ephemeral-network-controller:0.1.2-go` | Go |
-| Klyshko operator | `docker.io/deadstrider/klyshko-operator:0.1.2-go` | Go, modernized |
-| Thymus policy catalogue | `docker.io/deadstrider/thymus-policy-catalogue:0.1.2-go` | Go |
+| Castor | `docker.io/deadstrider/castor-service:0.1.3-go` | Go port, used with the published Castor chart 0.4.0 |
+| Amphora | `docker.io/deadstrider/amphora-service:0.1.3-go` | Go port, published Amphora chart 0.3.1 |
+| Ephemeral discovery | `docker.io/deadstrider/ephemeral-discovery:0.1.3-go` | Go |
+| Ephemeral network controller | `docker.io/deadstrider/ephemeral-network-controller:0.1.3-go` | Go |
+| Klyshko operator | `docker.io/deadstrider/klyshko-operator:0.1.3-go` | Go, modernized |
+| Thymus policy catalogue | `docker.io/deadstrider/thymus-policy-catalogue:0.1.3-go` | Go |
 | Knative Serving (patched, v1.23.0) | `docker.io/deadstrider/{activator,autoscaler,controller,queue,webhook,default-domain,…}-<hash>@sha256:…` | pinned by digest in `serving/v1.23.0-multiport/serving-core.yaml` |
 | Ephemeral (MPC engine) | `ghcr.io/carbynestack/ephemeral/ephemeral:0.3.1` | **Upstream image kept.** The Go `ephemeral` build contains no MP-SPDZ runtime and cannot execute MPC programs, so it was deliberately not wired in |
 | Klyshko provisioner / generator, MinIO, etcd, Redis, Ory, Stackable OPA | upstream | unchanged |
@@ -169,7 +169,7 @@ kubectl get ksvc                     # Ephemeral's Knative service Ready=True (n
 kubectl get pods -o custom-columns=NAME:.metadata.name,IMAGE:.spec.containers[*].image | grep deadstrider
 ```
 
-Expected: the castor, amphora, ephemeral-discovery, network-controller, klyshko-operator and policy-catalogue pods use the `deadstrider/*:0.1.0-go` images. Further checks:
+Expected: the castor, amphora, ephemeral-discovery, network-controller, klyshko-operator and policy-catalogue pods use the `deadstrider/*:0.1.3-go` images. Further checks:
 
 ```bash
 kubectl logs deploy/cs-castor -c castor        # or the castor pod; look for startup errors, DB migration, listening on 10100

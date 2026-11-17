@@ -48,7 +48,7 @@ For what was actually executed versus only statically validated see [Verificatio
 
 ## Container images
 
-The Helmfile defaults point to Go builds published on Docker Hub (`deadstrider/{castor-service,amphora-service,ephemeral-discovery,ephemeral-network-controller,klyshko-operator,thymus-policy-catalogue}:0.1.2-go`); every image can be overridden per component through `<NAME>_IMAGE_{REGISTRY,REPOSITORY,TAG}` (falling back to the upstream Java images is possible). The Ephemeral MPC engine keeps its upstream image because the Go build lacks the MP-SPDZ runtime. Compatibility of the Go images with the *published* SDK 0.8.1 charts was not tested on a cluster. See [test-deployment.md](test-deployment.md).
+The Helmfile defaults point to Go builds published on Docker Hub (`deadstrider/{castor-service,amphora-service,ephemeral-discovery,ephemeral-network-controller,klyshko-operator,thymus-policy-catalogue}:0.1.3-go`); every image can be overridden per component through `<NAME>_IMAGE_{REGISTRY,REPOSITORY,TAG}` (falling back to the upstream Java images is possible). The Ephemeral MPC engine keeps its upstream image because the Go build lacks the MP-SPDZ runtime. Compatibility of the Go images with the *published* SDK 0.8.1 charts was not tested on a cluster. See [test-deployment.md](test-deployment.md).
 
 ## Not verified
 
