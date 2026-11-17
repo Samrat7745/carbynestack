@@ -7495,7 +7495,7 @@ metadata:
 spec:
   # This is the Go import path for the binary that is containerized
   # and substituted here.
-  image: docker.io/deadstrider/queue-39be6f1d08a095bd076a71d288d295b6@sha256:15d247fabd08a59570f04b02f4004182f1ecdc9f631cba4988b32bbc99b6e8f1
+  image: docker.io/deadstrider/queue-39be6f1d08a095bd076a71d288d295b6@sha256:64b552fbfd3944111f1a5c46fdec21d62faa253b32fe1c9d8090072807a99af3
 
 ---
 # Copyright 2018 The Knative Authors
@@ -7962,7 +7962,7 @@ metadata:
 data:
   # This is the Go import path for the binary that is containerized
   # and substituted here.
-  queue-sidecar-image: docker.io/deadstrider/queue-39be6f1d08a095bd076a71d288d295b6@sha256:15d247fabd08a59570f04b02f4004182f1ecdc9f631cba4988b32bbc99b6e8f1
+  queue-sidecar-image: docker.io/deadstrider/queue-39be6f1d08a095bd076a71d288d295b6@sha256:64b552fbfd3944111f1a5c46fdec21d62faa253b32fe1c9d8090072807a99af3
   _example: |-
     ################################
     #                              #
@@ -9155,7 +9155,7 @@ spec:
         - name: activator
           # This is the Go import path for the binary that is containerized
           # and substituted here.
-          image: docker.io/deadstrider/activator-ecd51ca5034883acbe737fde417a3d86@sha256:8759f4feb1e6e339992e0f20d624a2a93f96b6e3050be7ba7045665f764c7b3e
+          image: docker.io/deadstrider/activator-ecd51ca5034883acbe737fde417a3d86@sha256:a03840f1be1097f00b20ce0d1c94302c17a1b8703b34444190448fb424ad70ff
           # The numbers are based on performance test results from
           # https://github.com/knative/serving/issues/1625#issuecomment-511930023
           resources:
@@ -9311,7 +9311,7 @@ spec:
         - name: autoscaler
           # This is the Go import path for the binary that is containerized
           # and substituted here.
-          image: docker.io/deadstrider/autoscaler-12c0fa24db31956a7cfa673210e4fa13@sha256:fc18fc5aadf8cc14e241e2a955e2b6e7f0dd1ddb503919ffd429a473088902b6
+          image: docker.io/deadstrider/autoscaler-12c0fa24db31956a7cfa673210e4fa13@sha256:85b6239a23709e0c3149c984455e233490d22bc96e5ff963367aa89a3048ffc0
           resources:
             requests:
               cpu: 100m
@@ -9436,7 +9436,7 @@ spec:
         - name: controller
           # This is the Go import path for the binary that is containerized
           # and substituted here.
-          image: docker.io/deadstrider/controller-f6fdb41c6acbc726e29a3104ff2ef720@sha256:9fa2355da208e08fd4c4d0971c2e0b9e376e91a3dafebfe7fdb7a015bd17a99f
+          image: docker.io/deadstrider/controller-f6fdb41c6acbc726e29a3104ff2ef720@sha256:344905a9e232cad1f112f5f06305f51169dc4031cf06cbf8c5e8dff6fcf38ae3
           resources:
             requests:
               cpu: 100m
@@ -9619,7 +9619,7 @@ spec:
         - name: webhook
           # This is the Go import path for the binary that is containerized
           # and substituted here.
-          image: docker.io/deadstrider/webhook-261c6506fca17bc41be50b3461f98f1c@sha256:0df0b765e8abdf9b5685ee722e74cd17f22e50cc8ed747fca4f31304692c0d65
+          image: docker.io/deadstrider/webhook-261c6506fca17bc41be50b3461f98f1c@sha256:76a3c883b5a4a5df198fe79ff10834c10e17f4eb53580befed8ff9ad4b01efdc
           resources:
             requests:
               cpu: 100m

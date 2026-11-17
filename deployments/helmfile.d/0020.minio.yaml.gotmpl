@@ -22,10 +22,10 @@ releases:
     wait: true
     values:
       - image:
-          repository: {{ env "MINIO_REPOSITORY" | default "quay.io/minio/minio" }}
+          repository: {{ env "MINIO_REPOSITORY" | default "docker.io/deadstrider/minio" }}
           tag: {{ env "MINIO_TAG" | default "RELEASE.2022-04-16T04-26-02Z" }}
         mcImage:
-          repository: {{ env "MINIO_MC_REPOSITORY" | default "quay.io/minio/mc"  }}
+          repository: {{ env "MINIO_MC_REPOSITORY" | default "docker.io/deadstrider/mc"}}
           tag: {{ env "MINIO_MC_TAG" | default "RELEASE.2022-04-16T21-11-21Z" }}
         {{ if env "IMAGE_PULL_SECRET" }}
         imagePullSecrets:

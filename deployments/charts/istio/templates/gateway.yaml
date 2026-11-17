@@ -63,7 +63,8 @@ spec:
     - port:
         number: 2379
         name: etcd-mtls
-        protocol: TCP
+        # Istio >= 1.2x rejects TLS settings on a TCP server; TLS is the terminating-TLS equivalent
+        protocol: TLS
       hosts:
         - "*"
       tls:

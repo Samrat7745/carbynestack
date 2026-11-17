@@ -19,10 +19,8 @@ spec:
              (not (has .Values.partner.etcdMaster.host .Values.partner.hosts)) }}
     - {{ .Values.partner.etcdMaster.host | quote }}
   {{- end }}
-  {{- if and .Values.partner.etcdMaster .Values.partner.etcdMaster.ip }}
-  addresses:
-    - {{ .Values.partner.etcdMaster.ip }}/32
-  {{- end }}
+  # Istio >= 1.2x only allows CIDR "addresses" with NONE/STATIC resolution; this entry uses DNS
+  # resolution of the partner FQDNs, so the former etcdMaster.ip /32 address is not set.
   ports:
     - number: 80
       name: http

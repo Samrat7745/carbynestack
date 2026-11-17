@@ -29,7 +29,7 @@ releases:
       image:
         registry: {{ env "CASTOR_IMAGE_REGISTRY" | default "docker.io" }}
         repository: {{ env "CASTOR_IMAGE_REPOSITORY" | default "deadstrider/castor-service" }}
-        tag: {{ env "CASTOR_IMAGE_TAG" | default "0.1.0-go" }}
+        tag: {{ env "CASTOR_IMAGE_TAG" | default "0.1.2-go" }}
         {{ if env "IMAGE_PULL_SECRET" }}
         pullSecrets:
           - {{ env "IMAGE_PULL_SECRET" }}

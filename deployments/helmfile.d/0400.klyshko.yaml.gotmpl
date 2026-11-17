@@ -22,12 +22,15 @@ releases:
   - name: {{ requiredEnv "RELEASE_NAME" }}-klyshko
     chart: carbynestack-oci/klyshko
     version: "0.4.0"
+    # The published chart hardcodes gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0, which no longer exists
+    # (kubebuilder retired its gcr.io images); the post-renderer replaces it (KUBE_RBAC_PROXY_IMAGE).
+    postRenderer: {{ env "KLYSHKO_POSTRENDERER" | default (printf "%s/../scripts/klyshko-postrender.sh" (env "PWD")) }}
     values:
       - controller:
           image:
             registry: {{ env "KLYSHKO_OPERATOR_IMAGE_REGISTRY" | default "docker.io" }}
             repository: {{ env "KLYSHKO_OPERATOR_IMAGE_REPOSITORY" | default "deadstrider/klyshko-operator" }}
-            tag: {{ env "KLYSHKO_OPERATOR_IMAGE_TAG" | default "0.1.0-go" }}
+            tag: {{ env "KLYSHKO_OPERATOR_IMAGE_TAG" | default "0.1.2-go" }}
             pullPolicy: {{ env "KLYSHKO_IMAGE_PULL_POLICY" | default "IfNotPresent" }}
           etcdEndpoint: {{ if eq (env "ETCD_MASTER_URL") $fqdn }}"cs-etcd:2379"{{ else }}{{ printf "%s:%s" (env "ETCD_MASTER_URL") (env "ETCD_MASTER_PORT" | default "2379") | quote }}{{ end }}
           castorUrl: {{ env "KLYSHKO_CASTOR_URL" | default "http://cs-castor:10100" | quote }}

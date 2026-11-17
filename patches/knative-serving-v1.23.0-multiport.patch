@@ -1,72 +1,55 @@
 diff --git a/pkg/apis/serving/k8s_validation.go b/pkg/apis/serving/k8s_validation.go
-index 5a8cff484..82304f2cf 100644
+index 5a8cff484..d79c2056c 100644
 --- a/pkg/apis/serving/k8s_validation.go
 +++ b/pkg/apis/serving/k8s_validation.go
-@@ -508,13 +508,16 @@ func AllMountedVolumes(containers []corev1.Container) sets.Set[string] {
- }
- 
- // validateContainersPorts validates that the expected number of container ports are present
--// and returns the single serving port if error is nil.
-+// and returns the serving port (the first port of the one container that declares ports)
-+// if error is nil.
- func validateContainersPorts(containers []corev1.Container) (corev1.ContainerPort, *apis.FieldError) {
-+	// Multi-port patch: a single container may declare several ports (the first
-+	// one is the serving port), but only one container may declare ports.
- 	var count int
- 	var port corev1.ContainerPort
- 	for i := range containers {
--		if c := len(containers[i].Ports); c > 0 {
--			count += c
-+		if len(containers[i].Ports) > 0 {
-+			count++
- 			port = containers[i].Ports[0]
- 		}
+@@ -532,14 +532,8 @@ func validateContainersPorts(containers []corev1.Container) (corev1.ContainerPor
+ 		return port, apis.ErrMissingField("ports")
  	}
-@@ -537,7 +540,7 @@ func validateContainersPorts(containers []corev1.Container) (corev1.ContainerPor
- 		return port, &apis.FieldError{
- 			Message: "more than one container port is set",
- 			Paths:   []string{"ports"},
+ 
+-	// More than one container sections have ports.
+-	if count > 1 {
+-		return port, &apis.FieldError{
+-			Message: "more than one container port is set",
+-			Paths:   []string{"ports"},
 -			Details: "Only a single port is allowed across all containers",
-+			Details: "Only a single container may declare ports",
- 		}
- 	}
+-		}
+-	}
++	// Carbyne Stack multi-port patch (same as v1.8.2-multiport-patch, commit d67b8d968f): the check
++	// "more than one container port is set" is removed, so containers may declare several ports.
  
-@@ -796,6 +799,12 @@ func validateContainerPorts(ports []corev1.ContainerPort) *apis.FieldError {
- 		})
- 	}
- 
-+	// Multi-port patch: additional ports are passed through to the user container
-+	// unchanged; only the basic checks (allowed fields, reserved ports, bounds) apply.
-+	for i := 1; i < len(ports); i++ {
-+		errs = errs.Also(validateContainerPortBasic(ports[i]).ViaIndex(i))
-+	}
-+
- 	return errs
+ 	return port, nil
  }
- 
 diff --git a/pkg/apis/serving/k8s_validation_test.go b/pkg/apis/serving/k8s_validation_test.go
-index 59285b2d0..91bb22d55 100644
+index 59285b2d0..8f5195018 100644
 --- a/pkg/apis/serving/k8s_validation_test.go
 +++ b/pkg/apis/serving/k8s_validation_test.go
-@@ -1016,7 +1016,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
- 		want: &apis.FieldError{
- 			Message: "more than one container port is set",
- 			Paths:   []string{"containers[*].ports"},
--			Details: "Only a single port is allowed across all containers",
-+			Details: "Only a single container may declare ports",
+@@ -1013,11 +1013,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
+ 				}},
+ 			}},
  		},
+-		want: &apis.FieldError{
+-			Message: "more than one container port is set",
+-			Paths:   []string{"containers[*].ports"},
+-			Details: "Only a single port is allowed across all containers",
+-		},
++		want: nil, // Carbyne Stack multi-port patch: several ports are allowed (as in v1.8.2-multiport-patch)
  	}, {
  		name: "flag enabled: multiple containers with multiple ports for each container",
-@@ -1040,7 +1040,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
- 		want: &apis.FieldError{
- 			Message: "more than one container port is set",
- 			Paths:   []string{"containers[*].ports"},
--			Details: "Only a single port is allowed across all containers",
-+			Details: "Only a single container may declare ports",
+ 		ps: corev1.PodSpec{
+@@ -1037,11 +1033,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
+ 				}},
+ 			}},
  		},
+-		want: &apis.FieldError{
+-			Message: "more than one container port is set",
+-			Paths:   []string{"containers[*].ports"},
+-			Details: "Only a single port is allowed across all containers",
+-		},
++		want: nil, // Carbyne Stack multi-port patch: several ports are allowed (as in v1.8.2-multiport-patch)
  	}, {
  		name: "flag enabled: multiple containers with multiple port for a single container",
-@@ -1058,11 +1058,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
+ 		ps: corev1.PodSpec{
+@@ -1058,11 +1050,7 @@ func TestPodSpecMultiContainerValidation(t *testing.T) {
  				Image: "helloworld",
  			}},
  		},
@@ -75,20 +58,11 @@ index 59285b2d0..91bb22d55 100644
 -			Paths:   []string{"containers[*].ports"},
 -			Details: "Only a single port is allowed across all containers",
 -		},
-+		want: nil,
++		want: nil, // Carbyne Stack multi-port patch: several ports are allowed (as in v1.8.2-multiport-patch)
  	}, {
  		name: "flag enabled: multiple containers with readinessProbe targeting different container's port",
  		ps: corev1.PodSpec{
-@@ -1711,7 +1707,7 @@ func TestUserContainerValidation(t *testing.T) {
- 		},
- 		want: nil,
- 	}, {
--		name: "has more than one ports with valid names",
-+		name: "has more than one port (multi-port patch)",
- 		c: corev1.Container{
- 			Image: "foo",
- 			Ports: []corev1.ContainerPort{{
-@@ -1720,11 +1716,7 @@ func TestUserContainerValidation(t *testing.T) {
+@@ -1720,11 +1708,7 @@ func TestUserContainerValidation(t *testing.T) {
  				Name: "http1",
  			}},
  		},
@@ -97,30 +71,11 @@ index 59285b2d0..91bb22d55 100644
 -			Paths:   []string{"ports"},
 -			Details: "Only a single port is allowed across all containers",
 -		},
-+		want: nil,
++		want: nil, // Carbyne Stack multi-port patch: several ports are allowed (as in v1.8.2-multiport-patch)
  	}, {
  		name: "has an empty port set",
  		c: corev1.Container{
-@@ -1732,6 +1724,18 @@ func TestUserContainerValidation(t *testing.T) {
- 			Ports: []corev1.ContainerPort{{}},
- 		},
- 		want: nil,
-+	}, {
-+		name: "has additional port that is reserved",
-+		c: corev1.Container{
-+			Image: "foo",
-+			Ports: []corev1.ContainerPort{{
-+				ContainerPort: 8080,
-+			}, {
-+				ContainerPort: 8012,
-+			}},
-+		},
-+		want: apis.ErrInvalidValue("8012 is a reserved port", "ports[1].containerPort",
-+			"8012 is a reserved port, please use a different value"),
- 	}, {
- 		name: "has more than one unnamed port",
- 		c: corev1.Container{
-@@ -1742,11 +1746,7 @@ func TestUserContainerValidation(t *testing.T) {
+@@ -1742,11 +1726,7 @@ func TestUserContainerValidation(t *testing.T) {
  				ContainerPort: 8181,
  			}},
  		},
@@ -129,12 +84,12 @@ index 59285b2d0..91bb22d55 100644
 -			Paths:   []string{"ports"},
 -			Details: "Only a single port is allowed across all containers",
 -		},
-+		want: nil,
++		want: nil, // Carbyne Stack multi-port patch: several ports are allowed (as in v1.8.2-multiport-patch)
  	}, {
  		name: "has tcp protocol",
  		c: corev1.Container{
 diff --git a/pkg/reconciler/revision/resources/deploy.go b/pkg/reconciler/revision/resources/deploy.go
-index 13880c270..48383ac11 100644
+index 13880c270..50bcfe999 100644
 --- a/pkg/reconciler/revision/resources/deploy.go
 +++ b/pkg/reconciler/revision/resources/deploy.go
 @@ -292,8 +292,8 @@ func makeContainer(container corev1.Container, rev *v1.Revision) corev1.Containe
@@ -144,19 +99,20 @@ index 13880c270..48383ac11 100644
 -	// Replacement is safe as only up to a single port is allowed on the Revision
 -	servingContainer.Ports = buildContainerPorts(userPort)
 +	// Multi-port patch: the first port becomes the (renamed) user port, any additional ports are kept as is.
-+	servingContainer.Ports = getContainerPorts(servingContainer.Ports, userPort)
++	servingContainer.Ports = getContainerPorts(rev, userPort)
  	servingContainer.Env = append(servingContainer.Env, buildUserPortEnv(userPortStr))
  	container := makeContainer(servingContainer, rev)
  	// If the user provides a liveness probe, we should rewrite in the port on the user-container for them.
-@@ -330,6 +330,16 @@ func buildContainerPorts(userPort int32) []corev1.ContainerPort {
+@@ -330,6 +330,17 @@ func buildContainerPorts(userPort int32) []corev1.ContainerPort {
  	}}
  }
  
-+// getContainerPorts returns the ports of the serving container: the first (user) port
-+// renamed to v1.UserPortName followed by all additional user-specified ports unchanged.
-+func getContainerPorts(ports []corev1.ContainerPort, userPort int32) []corev1.ContainerPort {
++// getContainerPorts is the Carbyne Stack multi-port patch (same as v1.8.2-multiport-patch, commit
++// d67b8d968f): the first port of the revision's serving container (rev.Spec.GetContainer()) becomes the
++// user port (renamed to v1.UserPortName), all further ports of that container are appended unchanged.
++func getContainerPorts(rev *v1.Revision, userPort int32) []corev1.ContainerPort {
 +	result := buildContainerPorts(userPort)
-+	if len(ports) > 1 {
++	if ports := rev.Spec.GetContainer().Ports; len(ports) > 1 {
 +		result = append(result, ports[1:]...)
 +	}
 +	return result
@@ -166,7 +122,7 @@ index 13880c270..48383ac11 100644
  	return []corev1.EnvVar{{
  		Name: "K_INTERNAL_POD_NAME",
 diff --git a/pkg/reconciler/revision/resources/deploy_test.go b/pkg/reconciler/revision/resources/deploy_test.go
-index 55a61165e..539ab5651 100644
+index 9cfea0171..84110bc6f 100644
 --- a/pkg/reconciler/revision/resources/deploy_test.go
 +++ b/pkg/reconciler/revision/resources/deploy_test.go
 @@ -598,6 +598,51 @@ func TestMakePodSpec(t *testing.T) {
