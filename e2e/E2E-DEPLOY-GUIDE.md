@@ -851,6 +851,7 @@ Common causes:
 | Login page `invalid_scope` / `invalid_client` | OAuth client of step 9 |
 | CLI `PKIX path building failed` | `JAVA_TOOL_OPTIONS` not set or `ts.jks` missing (steps 10.3, 10.4) |
 | A later game hangs | upstream SPECS-2171: delete the `ephemeral-generic` pods on both clusters and run it again |
+| Every game fails with `PlayerFinishedWithError` (engine log: `you must provide at least two players`) right after a `helmfile sync` on a running stack | the upgrade restarted `cs-ephemeral-discovery`, but the `ephemeral-generic` pods keep the state of the old discovery; restart them on both clusters: `kubectl delete pod -l serving.knative.dev/service=ephemeral-generic` (with `vcp it1` and `vcp it0`), wait until they are `2/2 Running`, run the test again |
 
 ## 14. Teardown
 
@@ -918,7 +919,9 @@ for c in it0 it1; do
 done
 ```
 
-Then deploy (step 7) with the tag set for each component:
+Then deploy (step 7) with the tag set for each component. On a stack that is
+already running, restart the `ephemeral-generic` pods afterwards (see the table
+in step 13):
 
 ```bash
 export CASTOR_IMAGE_TAG=$TAG AMPHORA_IMAGE_TAG=$TAG DISCOVERY_IMAGE_TAG=$TAG \
