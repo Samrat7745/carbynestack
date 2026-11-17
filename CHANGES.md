@@ -48,7 +48,9 @@ For what was actually executed versus only statically validated see [Verificatio
 
 ## Container images
 
-The Helmfile defaults point to Go builds published on Docker Hub (`deadstrider/{castor-service,amphora-service,ephemeral-discovery,ephemeral-network-controller,klyshko-operator,thymus-policy-catalogue}:0.1.3-go`); every image can be overridden per component through `<NAME>_IMAGE_{REGISTRY,REPOSITORY,TAG}` (falling back to the upstream Java images is possible). The Ephemeral MPC engine keeps its upstream image because the Go build lacks the MP-SPDZ runtime. Compatibility of the Go images with the *published* SDK 0.8.1 charts was not tested on a cluster. See [test-deployment.md](test-deployment.md).
+The Helmfile defaults point to Go builds published on Docker Hub (`deadstrider/{castor-service,amphora-service,ephemeral-discovery,ephemeral-network-controller,klyshko-operator,thymus-policy-catalogue}:0.1.4-go`); every image can be overridden per component through `<NAME>_IMAGE_{REGISTRY,REPOSITORY,TAG}` (falling back to the upstream Java images is possible). The Ephemeral MPC engine keeps its upstream image because the Go build lacks the MP-SPDZ runtime. Compatibility of the Go images with the *published* SDK 0.8.1 charts was not tested on a cluster. See [test-deployment.md](test-deployment.md).
+
+`0.1.4-go` (2026-11-17) replaces `0.1.3-go`: Castor and Amphora with `klauspost/compress` 1.20.2 and `moby/go-archive` 0.3.0 (GO-2026-6865, GO-2026-6253); Ephemeral discovery without the data races in the discovery FSM and game event handling; Klyshko operator checks a previously ignored marshal error. The network controller and Thymus images are unchanged (same content as `0.1.3-go`).
 
 ## Not verified
 

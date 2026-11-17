@@ -1,4 +1,4 @@
-# End-to-End Deployment, Step by Step (Go services 0.1.3-go)
+# End-to-End Deployment, Step by Step (Go services 0.1.4-go)
 
 This guide deploys a two-party Carbyne Stack Virtual Cloud on two kind
 clusters and runs the Millionaires' test with the Carbyne Stack CLI. It starts
@@ -42,7 +42,7 @@ generation, then the login and the test.
 | What | Source |
 | --- | --- |
 | Helmfiles, platform charts, patched Knative manifests, Millionaires program and script | [`Samrat7745/carbynestack`](https://github.com/Samrat7745/carbynestack), branch `go-migration` |
-| Go service images | Docker Hub, account `deadstrider`, tag `0.1.3-go` (public, pulled by the clusters) |
+| Go service images | Docker Hub, account `deadstrider`, tag `0.1.4-go` (public, pulled by the clusters) |
 | Patched Knative Serving images | Docker Hub, `deadstrider/*`, digest-pinned in the deployment repository |
 | Carbyne Stack CLI 0.6.0 | official release [`carbynestack/cli` v0.6.0](https://github.com/carbynestack/cli/releases/tag/cli-v0.6.0) (there is no fork of the CLI) |
 | Go service sources (only to rebuild images, appendix A) | `Samrat7745/{castor,amphora,ephemeral,klyshko,thymus}`, branch `go-migration` |
@@ -69,12 +69,12 @@ never changed.
 
 | Component | Image |
 | --- | --- |
-| Castor | `docker.io/deadstrider/castor-service:0.1.3-go` |
-| Amphora | `docker.io/deadstrider/amphora-service:0.1.3-go` |
-| Ephemeral discovery | `docker.io/deadstrider/ephemeral-discovery:0.1.3-go` |
-| Ephemeral network controller | `docker.io/deadstrider/ephemeral-network-controller:0.1.3-go` |
-| Klyshko operator | `docker.io/deadstrider/klyshko-operator:0.1.3-go` |
-| Thymus policy catalogue | `docker.io/deadstrider/thymus-policy-catalogue:0.1.3-go` |
+| Castor | `docker.io/deadstrider/castor-service:0.1.4-go` |
+| Amphora | `docker.io/deadstrider/amphora-service:0.1.4-go` |
+| Ephemeral discovery | `docker.io/deadstrider/ephemeral-discovery:0.1.4-go` |
+| Ephemeral network controller | `docker.io/deadstrider/ephemeral-network-controller:0.1.4-go` |
+| Klyshko operator | `docker.io/deadstrider/klyshko-operator:0.1.4-go` |
+| Thymus policy catalogue | `docker.io/deadstrider/thymus-policy-catalogue:0.1.4-go` |
 | Ephemeral MPC engine | `ghcr.io/carbynestack/ephemeral/ephemeral:0.3.1` (upstream) |
 | Knative Serving 1.23 (multi-port patch) | `docker.io/deadstrider/*`, digest-pinned |
 
@@ -179,7 +179,7 @@ ls $CS/platform/helmfile.d $CS/deployments/helmfile.d
 ls $CS/serving/v1.23.0-multiport            # serving-core.yaml  serving-crds.yaml
 ls $CS/e2e                                  # billionaires.mpc  mill.sh  E2E-DEPLOY-GUIDE.md
 ls $CS/scripts                              # serve-serving-manifests.sh  klyshko-postrender.sh ...
-grep -h 'default "0.1.3-go"' $CS/deployments/helmfile.d/*.gotmpl | wc -l   # 6
+grep -h 'default "0.1.4-go"' $CS/deployments/helmfile.d/*.gotmpl | wc -l   # 6
 ```
 
 ### 1.4 Carbyne Stack CLI
@@ -201,7 +201,7 @@ step 3):
 ```bash
 for n in castor-service amphora-service ephemeral-discovery ephemeral-network-controller \
          klyshko-operator thymus-policy-catalogue; do
-  docker pull -q docker.io/deadstrider/$n:0.1.3-go
+  docker pull -q docker.io/deadstrider/$n:0.1.4-go
 done
 docker pull -q kindest/node:v1.37.0
 ```
@@ -309,7 +309,7 @@ clusters so they are not downloaded again.
 for c in it0 it1; do
   for n in castor-service amphora-service ephemeral-discovery ephemeral-network-controller \
            klyshko-operator thymus-policy-catalogue; do
-    kind load docker-image docker.io/deadstrider/$n:0.1.3-go --name $c
+    kind load docker-image docker.io/deadstrider/$n:0.1.4-go --name $c
   done
 done
 ```
@@ -568,9 +568,9 @@ kubectl get ksvc                                       # ephemeral-generic ... T
 kubectl get pods -o 'custom-columns=NAME:.metadata.name,IMAGE:.spec.containers[*].image' \
   | grep deadstrider
 # castor, amphora, ephemeral-discovery, ephemeral-network-controller,
-# thymus-policy-catalogue: docker.io/deadstrider/...:0.1.3-go
+# thymus-policy-catalogue: docker.io/deadstrider/...:0.1.4-go
 kubectl get deploy klyshko-controller-manager -o jsonpath='{.spec.template.spec.containers[*].image}{"\n"}'
-# quay.io/brancz/kube-rbac-proxy:v0.23.1 docker.io/deadstrider/klyshko-operator:0.1.3-go
+# quay.io/brancz/kube-rbac-proxy:v0.23.1 docker.io/deadstrider/klyshko-operator:0.1.4-go
 ```
 
 Repeat with `vcp it1`.
@@ -888,10 +888,10 @@ git clone -b go-migration https://github.com/Samrat7745/common.git
 
 ### A.2 Build the images
 
-Choose a new tag; `0.1.3-go` is the published one.
+Choose a new tag; `0.1.4-go` is the published one.
 
 ```bash
-export TAG=0.1.4-go
+export TAG=0.1.5-go
 cd $WORK/src
 docker build -t docker.io/deadstrider/castor-service:$TAG               castor/go
 docker build -t docker.io/deadstrider/amphora-service:$TAG              amphora/go
