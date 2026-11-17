@@ -107,7 +107,8 @@ On Ubuntu, missing ones come from `sudo apt install openjdk-17-jre-headless jq g
 
 ### 1.2 Tools (kind, kubectl, Helm 3, Helmfile)
 
-Skip a tool if `which` already finds the right version. kind, kubectl and
+These are the latest releases as of 2026-11-17 (Helm 3.22.1 is the latest
+Helm 3). Skip a tool if `which` already finds the right version. kind, kubectl and
 Helmfile go to `~/bin`; Helm 3 goes into `$WORK/helm3`. It is put first on the
 `PATH` in step 2.4, so an installed Helm 4 stays untouched (the Helmfiles were
 written for Helm 3).
@@ -121,8 +122,8 @@ curl -fsSLo kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 && chmod +
 # kubectl v1.37.2
 curl -fsSLo kubectl https://dl.k8s.io/release/v1.37.2/bin/linux/amd64/kubectl && chmod +x kubectl
 
-# Helmfile 1.8.2
-curl -fsSL https://github.com/helmfile/helmfile/releases/download/v1.8.2/helmfile_1.8.2_linux_amd64.tar.gz \
+# Helmfile 1.8.4
+curl -fsSL https://github.com/helmfile/helmfile/releases/download/v1.8.4/helmfile_1.8.4_linux_amd64.tar.gz \
   | tar -xz helmfile
 
 # Helm v3.22.1 (into $WORK/helm3/linux-amd64/helm)
@@ -133,12 +134,21 @@ curl -fsSL https://get.helm.sh/helm-v3.22.1-linux-amd64.tar.gz | tar -xz -C $WOR
 mkdir -p $WORK/hp-none
 ```
 
+Put `~/bin` on the `PATH` of every new terminal. zsh does not read
+`~/.profile` (which adds `~/bin` for bash), so without this line `kind`,
+`kubectl` and `helmfile` are reported as "command not found":
+
+```bash
+grep -q 'export PATH="$HOME/bin:$PATH"' ~/.zshrc || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
 ▶ **Check:**
 
 ```bash
 $HOME/bin/kind version                       # kind v0.33.0 ...
 $HOME/bin/kubectl version --client           # Client Version: v1.37.2
-$HOME/bin/helmfile --version                 # helmfile version 1.8.2
+$HOME/bin/helmfile --version                 # helmfile version 1.8.4
 $WORK/helm3/linux-amd64/helm version --short # v3.22.1+...
 ```
 
@@ -267,7 +277,7 @@ vcp() {
 
 ```bash
 helm version --short          # v3.22.1+...   (must be Helm 3)
-helmfile --version            # helmfile version 1.8.2
+helmfile --version            # helmfile version 1.8.4
 kind version                  # kind v0.33.0 ...
 kubectl version --client      # Client Version: v1.37.2
 ```
