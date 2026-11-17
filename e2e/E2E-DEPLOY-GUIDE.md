@@ -169,7 +169,7 @@ cd $WORK/carbynestack && git fetch origin && git checkout go-migration && git pu
 
 This guide uses `CS=$WORK/carbynestack`. On this machine the same repository
 is also checked out at
-`~/workspace/Go_migration/CarbyneStackMigration/carbynestack` (branch `main`,
+`~/workspace/Go_migration/go_versions/carbynestack` (branch `main`,
 tracking `origin/go-migration`); either checkout works if it is up to date.
 
 ▶ **Check** that the parts this guide needs are there:
